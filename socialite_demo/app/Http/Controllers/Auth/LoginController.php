@@ -2,8 +2,13 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Models\User;
+use Illuminate\Support\Str;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use App\Providers\RouteServiceProvider;
+use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 
 class LoginController extends Controller
@@ -36,5 +41,49 @@ class LoginController extends Controller
     public function __construct()
     {
         $this->middleware('guest')->except('logout');
+    }
+
+    public function redirectToGoogle()
+    {
+        return Socialite::driver('google')->redirect();
+    }
+
+    public function handleGoogleCallback()
+    {
+        $user = Socialite::driver('google')->user();
+
+        $this->_registerOrLogin($user);
+
+        return redirect()->route('home');
+    }
+
+    public function redirectToGithub()
+    {
+        return Socialite::driver('github')->redirect();
+    }
+
+    public function handleGithubCallback()
+    {
+        $user = Socialite::driver('github')->user();
+
+        $this->_registerOrLogin($user);
+
+        return redirect()->route('home');
+    }
+
+    public function _registerOrLogin($data)
+    {
+        $user = User::where('email', $data->email)->first();
+
+        if (!$user) {
+            $user = User::create([
+                'name'        => $data->name,
+                'email'       => $data->email,
+                'provider_id' => $data->id,
+                'avatar'      => $data->avatar
+            ]);
+        }
+
+        Auth::login($user);
     }
 }
